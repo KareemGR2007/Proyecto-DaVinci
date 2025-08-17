@@ -3,21 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GLB Viewer — Debug fácil</title>
+  <title>Debug automático GLB — model-viewer</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body{margin:0;font-family:system-ui,Arial}
-    #viewer{width:100vw;height:65vh;background:#111;display:block}
+    #viewer{width:100vw;height:60vh;background:#111;display:block}
     #status{padding:10px;background:#f5f5f5}
-    pre{white-space:pre-wrap;word-break:break-word}
+    pre{white-space:pre-wrap;word-break:break-word;padding:10px;background:#fafafa;border-top:1px solid #ddd}
     button{margin:6px}
+    .ok{color:green} .bad{color:crimson}
   </style>
 </head>
 <body>
-  <!-- Cambia la ruta abajo -->
   <script>
-    // Pon aquí la ruta exacta relativa al index.html
-    const MODEL_PATH = './Duck.glb';
+    // --- Cambia solo esta línea al nombre exacto de tu .glb ---
+    const MODEL_FILENAME = 'Duck.glb';
+    // --------------------------------------------------------
   </script>
 
   <model-viewer id="viewer"
@@ -26,77 +27,149 @@
     camera-controls
     auto-rotate
     interaction-prompt="none"
-    style="width:100%;height:65vh">
+    style="width:100%;height:60vh">
   </model-viewer>
 
-  <div id="status">Estado: iniciando...</div>
+  <div id="status">Estado: buscando archivo <strong id="fileName"></strong> ...</div>
+
   <div style="padding:10px">
-    <button id="btn-check">Comprobar .glb (fetch)</button>
-    <button id="btn-open">Abrir .glb en nueva pestaña</button>
-    <button id="btn-swap">Probar modelo público</button>
+    <button id="btn-run">Buscar y cargar automáticamente</button>
+    <button id="btn-open">Abrir la primera URL detectada en nueva pestaña</button>
+    <button id="btn-swc">Comprobar service worker</button>
   </div>
 
-  <pre id="output"></pre>
+  <pre id="log"></pre>
 
   <script>
     const viewer = document.getElementById('viewer');
     const status = document.getElementById('status');
-    const out = document.getElementById('output');
-    const btnCheck = document.getElementById('btn-check');
+    const logEl = document.getElementById('log');
+    const fileNameEl = document.getElementById('fileName');
+    const btnRun = document.getElementById('btn-run');
     const btnOpen = document.getElementById('btn-open');
-    const btnSwap = document.getElementById('btn-swap');
+    const btnSwc = document.getElementById('btn-swc');
 
-    // Asignar la ruta al viewer
-    viewer.src = MODEL_PATH;
-    status.textContent = 'Cargando: ' + MODEL_PATH;
+    fileNameEl.textContent = MODEL_FILENAME;
 
-    function log(s){ out.textContent += s + "\\n"; }
+    function log(s){ logEl.textContent += s + '\\n'; }
+    function clearLog(){ logEl.textContent = ''; }
 
-    viewer.addEventListener('load', ()=> status.textContent = 'Modelo cargado correctamente.');
-    viewer.addEventListener('error', ev => {
-      status.textContent = 'model-viewer ERROR: ' + (ev?.detail?.message || JSON.stringify(ev?.detail) || 'desconocido');
-      log('model-viewer event: ' + JSON.stringify(ev?.detail));
-    });
+    // Genera rutas candidatas razonables según dónde esté index.html
+    function generateCandidates(name){
+      const candidates = [];
+      // simple relative and root variants
+      candidates.push(`./${name}`);
+      candidates.push(`${name}`);
+      candidates.push(`/${name}`); // root
+      // usar el "dir" de la URL actual
+      const path = window.location.pathname;
+      const dir = path.endsWith('/') ? path : path.substring(0, path.lastIndexOf('/') + 1);
+      // si la página está en /repo/ o /repo/sub/ etc:
+      candidates.push(dir + name); // relative to directory
+      candidates.push(window.location.origin + dir + name);
+      // intento una variante con solo el primer segmento (útil en GitHub Pages /repo/)
+      const segs = dir.split('/').filter(Boolean);
+      if (segs.length){
+        candidates.push(window.location.origin + '/' + segs[0] + '/' + name);
+      }
+      // elimina duplicados manteniendo orden
+      return [...new Set(candidates)];
+    }
 
-    btnCheck.addEventListener('click', async () => {
-      out.textContent = '';
-      status.textContent = 'Comprobando ' + MODEL_PATH + ' ...';
-      try {
-        const resp = await fetch(MODEL_PATH, { method: 'GET', cache: 'no-store' });
-        log('HTTP status: ' + resp.status + ' ' + resp.statusText);
-        log('Content-Type: ' + resp.headers.get('content-type'));
-        log('Content-Length: ' + resp.headers.get('content-length'));
-        log('Cache-Control: ' + resp.headers.get('cache-control'));
-        if (resp.ok) {
-          const size = (await resp.arrayBuffer()).byteLength;
-          log('Tamaño (bytes): ' + size);
-          status.textContent = 'Recurso accesible (HTTP ' + resp.status + ').';
-        } else {
-          status.textContent = 'Error HTTP: ' + resp.status;
+    async function tryCandidates(name){
+      clearLog();
+      status.textContent = 'Buscando ' + name + ' en varias rutas...';
+      const cands = generateCandidates(name);
+      log('Rutas candidatas (en orden):');
+      cands.forEach((c,i) => log(`${i+1}. ${c}`));
+
+      for (let url of cands){
+        log('');
+        log(`Probando: ${url}`);
+        try {
+          const resp = await fetch(url, { method: 'GET', cache: 'no-store' });
+          log(` -> HTTP ${resp.status} ${resp.statusText}`);
+          const ct = resp.headers.get('content-type') || '';
+          const cl = resp.headers.get('content-length') || 'unknown';
+          log(`    Content-Type: ${ct}`);
+          log(`    Content-Length: ${cl}`);
+          // si responde ok y parece binario (o glb), lo usamos
+          if (resp.ok){
+            const size = (await resp.arrayBuffer()).byteLength;
+            log(`    Tamaño descargado (bytes): ${size}`);
+            // heurística: content-type para glb suele ser application/octet-stream o model/gltf-binary
+            if (ct.includes('model') || ct.includes('gltf') || ct.includes('octet') || size > 0){
+              status.innerHTML = `<span class="ok">Encontrado y accesible:</span> ${url}`;
+              // si es una URL absoluta (origin), úsala; si no, conviértela a absoluta para viewer
+              const absolute = new URL(url, window.location.href).href;
+              viewer.src = absolute;
+              log('Cargando viewer desde: ' + absolute);
+              return { ok: true, url: absolute };
+            } else {
+              // posible que servidor devuelva HTML (página 200 con mensaje) -> no es correcto
+              log('    Advertencia: content-type no parece glb; se ignora esta ruta.');
+            }
+          } else {
+            log('    No OK (HTTP != 200). Continúo con siguiente candidato.');
+          }
+        } catch(err){
+          log(`    Fetch falló: ${err.message}`);
+          log('    (posible CORS, servicio bloqueado o mixed-content si hay HTTP/HTTPS conflictivo)');
         }
-      } catch(err){
-        status.textContent = 'Fetch falló: ' + err.message;
-        log('Fetch error: ' + err);
+      }
+      status.innerHTML = `<span class="bad">No se encontró el archivo accesible.</span> Revisa ruta, mayúsculas, rama de Pages o service worker.`;
+      return { ok:false };
+    }
+
+    // Botón principal
+    btnRun.addEventListener('click', async () => {
+      const res = await tryCandidates(MODEL_FILENAME);
+      if (!res.ok){
+        log('');
+        log('Siguientes pasos recomendados:');
+        log('- Abre manualmente la ruta (prueba cada candidato) con "Abrir en nueva pestaña".');
+        log('- Revisa DevTools → Network para ver si aparece 404/403 o CORS.');
+        log('- Ve a DevTools → Application → Service Workers y unregister si hay uno registrado.');
+        log('- Asegúrate que el .glb está comiteado en la MISMA rama que usas para GitHub Pages.');
+        log('- Prueba en ventana incógnita o con cache deshabilitado (Ctrl+F5).');
+        log('- Verifica mayúsculas/minúsculas exactas del nombre.');
       }
     });
 
-    btnOpen.addEventListener('click', () => window.open(MODEL_PATH, '_blank'));
-
-    btnSwap.addEventListener('click', () => {
-      viewer.src = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
-      status.textContent = 'Cargando modelo público de prueba...';
+    btnOpen.addEventListener('click', () => {
+      const cands = generateCandidates(MODEL_FILENAME);
+      if (cands.length) window.open(cands[0], '_blank');
     });
 
-    // Info service workers
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(regs => {
-        if (regs.length) log('Service workers registrados: ' + regs.length + ' (ve a DevTools > Application para unregister).');
-        else log('No hay service workers registrados.');
-      });
-    }
+    btnSwc.addEventListener('click', async () => {
+      if (!('serviceWorker' in navigator)){ alert('Service workers no están soportados en este navegador.'); return; }
+      const regs = await navigator.serviceWorker.getRegistrations();
+      if (!regs.length){
+        alert('No hay service workers registrados.');
+        return;
+      }
+      let info = `Service workers registrados: ${regs.length}\n\nSe recomienda ir a DevTools → Application → Service Workers → Unregister (o usar Incógnito) y recargar la página.`;
+      alert(info);
+    });
+
+    // mostrar eventos del viewer
+    viewer.addEventListener('load', ()=> {
+      status.innerHTML = '<span class="ok">Modelo cargado en viewer correctamente.</span>';
+      log('viewer: evento load recibido.');
+    });
+    viewer.addEventListener('error', ev => {
+      status.innerHTML = `<span class="bad">model-viewer ERROR:</span> ${(ev?.detail?.message) || JSON.stringify(ev?.detail) || 'desconocido'}`;
+      log('viewer error event: ' + JSON.stringify(ev?.detail));
+    });
+
+    // Ejecutar automáticamente al cargar la página (opcional)
+    window.addEventListener('load', () => {
+      btnRun.click();
+    });
   </script>
 </body>
 </html>
+
 
 
 
