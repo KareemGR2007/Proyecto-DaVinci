@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Debug GLB — Página de prueba</title>
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <style>
+    html,body{height:100%;margin:0;font-family:system-ui,Arial}
+    header{background:#111;color:#fff;padding:10px}
+    main{padding:12px}
+    #viewer{width:100%;height:55vh;background:#000;border-radius:6px;overflow:hidden;display:block}
+    #status{margin-top:8px;padding:10px;background:#fff;border-radius:6px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+    pre{white-space:pre-wrap;word-break:break-word;background:#fff;padding:10px;border-radius:6px;margin-top:8px;box-shadow:0 1px 3px rgba(0,0,0,.05);max-height:220px;overflow:auto}
+    button{margin:6px;padding:8px 12px;border-radius:6px;border:1px solid #ccc;background:#fff;cursor:pointer}
+    .ok{color:green} .bad{color:crimson}
+  </style>
+</head>
+<body>
+  <header><strong>Debug GLB — Prueba rápida</strong></header>
+  <main>
+    <p>Esta página intenta cargar <code>Duck.glb</code> (archivo que encontré en tu repo). Si no lo tienes con ese nombre, cámbialo antes de subir o usa el botón de abajo para probar un modelo público.</p>
+
+    <model-viewer id="viewer"
+      src=""
+      alt="Modelo 3D"
+      camera-controls
+      auto-rotate
+      interaction-prompt="none"
+      style="width:100%;height:55vh">
+    </model-viewer>
+
+    <div id="status">Estado: inicializando...</div>
+
+    <div>
+      <button id="btn-check">Comprobar Duck.glb (fetch)</button>
+      <button id="btn-open">Abrir Duck.glb en nueva pestaña</button>
+      <button id="btn-public">Cargar modelo público (prueba)</button>
+      <button id="btn-clear">Limpiar logs</button>
+    </div>
+
+    <pre id="log">Logs aparecerán aquí...</pre>
+  </main>
+
+  <script>
+    const MODEL_NAME = 'Duck.glb'; // cambia si necesitas otro nombre
+    const viewer = document.getElementById('viewer');
+    const status = document.getElementById('status');
+    const logEl = document.getElementById('log');
+    const btnCheck = document.getElementById('btn-check');
+    const btnOpen = document.getElementById('btn-open');
+    const btnPublic = document.getElementById('btn-public');
+    const btnClear = document.getElementById('btn-clear');
+
+    function clearLog(){ logEl.textContent = ''; }
+    function log(s){ logEl.textContent += s + '\n'; }
+
+    // set default src to model name in same folder
+    viewer.src = './' + MODEL_NAME;
+    status.textContent = 'Intentando cargar: ' + viewer.src;
+
+    viewer.addEventListener('load', ()=>{
+      status.innerHTML = '<span class="ok">Modelo cargado en viewer correctamente.</span>';
+      log('viewer: evento load recibido.');
+    });
+    viewer.addEventListener('error', ev=>{
+      status.innerHTML = '<span class="bad">model-viewer ERROR</span> — mira logs.';
+      log('viewer error event: ' + (ev?.detail ? JSON.stringify(ev.detail) : JSON.stringify(ev)));
+    });
+
+    btnCheck.addEventListener('click', async ()=>{
+      clearLog();
+      const url = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/') + MODEL_NAME;
+      status.textContent = 'Comprobando: ' + url;
+      log('Fetch a: ' + url);
+      try {
+        const resp = await fetch(url, { method:'GET', cache:'no-store' });
+        log('HTTP: ' + resp.status + ' ' + resp.statusText);
+        log('Content-Type: ' + resp.headers.get('content-type'));
+        log('Content-Length: ' + resp.headers.get('content-length'));
+        if (resp.ok){
+          const size = (await resp.arrayBuffer()).byteLength;
+          log('Tamaño bytes: ' + size);
+          status.innerHTML = '<span class="ok">Recurso accesible (HTTP ' + resp.status + ')</span>';
+        } else {
+          status.innerHTML = '<span class="bad">Error HTTP: ' + resp.status + '</span>';
+        }
+      } catch(err){
+        status.innerHTML = '<span class="bad">Fetch falló</span>';
+        log('Fetch error: ' + err);
+        log('Posible causa: CORS, mixed content (HTTP/HTTPS) o service worker bloqueando. Prueba en incógnito.');
+      }
+    });
+
+    btnOpen.addEventListener('click', ()=>{
+      const url = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/') + MODEL_NAME;
+      window.open(url, '_blank');
+    });
+
+    btnPublic.addEventListener('click', ()=>{
+      viewer.src = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/DamagedHelmet/glTF-Binary/DamagedHelmet.glb';
+      status.textContent = 'Cargando modelo público de prueba...';
+      clearLog();
+      log('Cargando modelo público de prueba (Khronos DamagedHelmet).');
+    });
+
+    btnClear.addEventListener('click', ()=>{ clearLog(); status.textContent='Estado: listo'; });
+
+    // show if there is a canvas (WebGL) present after short delay
+    setTimeout(()=>{
+      const c = document.querySelector('canvas');
+      log('Canvas presente: ' + !!c);
+      if (c){
+        const gl = c.getContext('webgl2') || c.getContext('webgl');
+        log('WebGL context: ' + (!!gl) + (gl ? (' — ' + gl.getParameter(gl.VERSION)) : ''));
+      } else {
+        log('No hay canvas detectado aún. model-viewer aún no creó el canvas o WebGL está bloqueado.');
+      }
+    }, 800);
+  </script>
+</body>
+</html>
