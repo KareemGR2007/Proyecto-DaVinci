@@ -2,35 +2,32 @@
 <html>
   <head>
     <meta charset="utf-8">
-    <title>Museo Virtual Da Vinci</title>
+    <title>Escena 3D sencilla</title>
     <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   </head>
   <body style="margin:0; overflow:hidden;">
-    <a-scene embedded>
-
-      <!-- Fondo y luces -->
-      <a-sky color="#dbe7f0"></a-sky>
-      <a-light type="ambient" intensity="0.8"></a-light>
-      <a-light type="directional" intensity="0.6" position="1 2 1"></a-light>
-
-      <!-- Cámara con controles -->
-      <a-entity position="0 2 8">
+    <a-scene>
+      
+      <!-- Cielo -->
+      <a-sky color="#87CEEB"></a-sky>
+      
+      <!-- Campo (plano verde) -->
+      <a-plane color="#228B22" rotation="-90 0 0" width="20" height="20" position="0 0 0"></a-plane>
+      
+      <!-- Cámara -->
+      <a-entity position="0 2 5">
         <a-camera wasd-controls look-controls></a-camera>
       </a-entity>
-
+      
+      <!-- Objeto 3D local (mismo directorio que el HTML) -->
       <a-entity 
-  gltf-model="paracaidas.glb"
-  position="0 1 -5"
-  scale="1.5 1.5 1.5"
-  rotation="0 0 0"
-  animation="property: rotation; to: 0 360 0; loop: true; dur: 20000; easing: linear">
-</a-entity>
-
-   
-      <a-text value="Paracaídas" position="5 3.5 -5" color="black" width="4" align="center"></a-text>
-
+        gltf-model="duck.glb"
+        position="0 0.5 0"
+        scale="0.01 0.01 0.01"
+        rotation="0 45 0"
+        animation="property: rotation; to: 0 405 0; loop: true; dur: 10000; easing: linear">
+      </a-entity>
+      
     </a-scene>
   </body>
 </html>
-
-
