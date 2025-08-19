@@ -71,7 +71,7 @@
       width: 100%;
       height: 300px;
       border-radius: 10px;
-      background-color: #2e2e2e; /* Fondo gris oscuro para ver modelos blancos */
+      background-color: #F5F5F5;
     }
 
     p {
@@ -79,12 +79,13 @@
       font-weight: bold;
       color: inherit;
     }
+    .fondo-gris  { background-color: #3B3B3B; }
   </style>
 </head>
 <body>
 
   <header>
-    <img src="logoUNAM.png" alt="Logo de la escuela"> 
+    <img src="logoUNAM1.png" alt="Logo de la escuela"> 
     <h1>Historia de vuelo- Visor de modelos 3D</h1>
   </header>
 
@@ -110,13 +111,14 @@
   <h2>Vuelo Motorizado - Hermanos Wright</h2>
   <div class="gallery">
     <div class="card card-dark"> 
-      <model-viewer src="WrightFlyer1903.glb" alt="Wright Flyer 1903"
+      <model-viewer class="fondo-gris" src="WrightFlyer1903.glb" alt="Wright Flyer 1903"
         camera-controls auto-rotate ar shadow-intensity="1"></model-viewer>
       <p>Wright Flyer 1903</p>
     </div>
   </div> 
 </body>
 </html>
+
 
 
 
