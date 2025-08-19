@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Modelos Da Vinci</title>
+  <title>Historia de Vuelo</title>
   <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
   <style>
     body {
@@ -12,57 +12,82 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: center;
       min-height: 100vh;
     }
-    h1 {
-      margin: 20px 0;
+
+    /* Encabezado con logo */
+    header {
+      width: 100%;
+      padding: 20px;
+      background: #222;
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 15px;
+    }
+    header img {
+      height: 60px;
+      width: auto;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 1.8em;
+    }
+
+    h2 {
+      margin: 15px 0;
       color: #333;
     }
+
     .gallery {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
       gap: 30px;
       width: 90%;
       max-width: 1200px;
+      margin-bottom: 40px;
     }
+
     .card {
       background: white;
       border-radius: 15px;
       box-shadow: 0 6px 15px rgba(0,0,0,0.15);
       padding: 15px;
       text-align: center;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-    }
-        .card1 {
-      background: black;
-      border-radius: 15px;
-      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
-      padding: 15px;
-      text-align: center;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
     .card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+      transform: translateY(-10px) scale(1.02);
+      box-shadow: 0 15px 25px rgba(0,0,0,0.3);
     }
+
+    .card-dark {
+      background: #1c1c1c;
+      color: white;
+    }
+
     model-viewer {
       width: 100%;
       height: 300px;
       border-radius: 10px;
-      background-color: #f5f5f5;
+      background-color: #2e2e2e; /* Fondo gris oscuro para ver modelos blancos */
     }
- 
+
     p {
       margin-top: 10px;
       font-weight: bold;
-      color: #444;
+      color: inherit;
     }
-    .fondo-gris  { background-color: #3B3B3B; }
   </style>
 </head>
 <body>
-  <h1>Visionario</h1>
+
+  <header>
+    <img src="logoUNAM.png" alt="Logo de la escuela"> 
+    <h1>Historia de vuelo- Visor de modelos 3D</h1>
+  </header>
+
   <h2>Inventos de Leonardo Da Vinci</h2>
   <div class="gallery">
     <div class="card">
@@ -81,18 +106,17 @@
       <p>Ornitóptero</p>
     </div>
   </div>
-  <h1>Vuelo Motorizado</h1>
-  <h2>Los Hermanos  Wright</h2>
+
+  <h2>Vuelo Motorizado - Hermanos Wright</h2>
   <div class="gallery">
-    <div class="card1"> 
-      <model-viewer class="fondo-gris"src="WrightFlyer1903.glb" alt="Wright Flyer 1903"
+    <div class="card card-dark"> 
+      <model-viewer src="WrightFlyer1903.glb" alt="Wright Flyer 1903"
         camera-controls auto-rotate ar shadow-intensity="1"></model-viewer>
       <p>Wright Flyer 1903</p>
     </div>
   </div> 
 </body>
 </html>
-
 
 
 
